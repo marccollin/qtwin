@@ -30,11 +30,17 @@ QList<Element> readElements(const QByteArray &xml, QString *error)
     while (!reader.atEnd()) {
         reader.readNext();
         if (reader.isStartElement()) {
-            Element element{reader.name().toString(), {}, reader.attributes().value(QLatin1String("ref")).toString()};
+            QString ref = reader.attributes().value(QLatin1String("ref")).toString();
+            if (ref.isEmpty())
+                ref = reader.attributes().value(QLatin1String("type")).toString();
+            Element element{reader.name().toString(), {}, ref};
             if (element.name == QLatin1String("depth") || element.name == QLatin1String("temperature")
                 || element.name == QLatin1String("divetime") || element.name == QLatin1String("o2")
                 || element.name == QLatin1String("datetime") || element.name == QLatin1String("divenumber")
-                || element.name == QLatin1String("greatestdepth")) {
+                || element.name == QLatin1String("greatestdepth") || element.name == QLatin1String("averagedepth")
+                || element.name == QLatin1String("lowesttemperature") || element.name == QLatin1String("surfacepressure")
+                || element.name == QLatin1String("measuredpo2") || element.name == QLatin1String("gradientfactorlow")
+                || element.name == QLatin1String("gradientfactorhigh")) {
                 element.text = reader.readElementText();
             }
             elements << element;
@@ -168,6 +174,11 @@ private slots:
         QCOMPARE(dive->mixes.at(1).hePercent, 0);
         QCOMPARE(dive->samples.at(1).timeSeconds, 1456);
         QCOMPARE(dive->gasSwitches.value(1, -1), 1);
+        QCOMPARE(dive->mode, DiveMode::ClosedCircuit);
+        QCOMPARE(dive->surfacePressureMillibar, std::optional<int>(1063));
+        QCOMPARE(dive->gradientFactorLow, std::optional<int>(50));
+        QCOMPARE(dive->gradientFactorHigh, std::optional<int>(70));
+        QCOMPARE(dive->averageDepthMeters, std::optional<int>(26));
         QVERIFY(dive->warnings.isEmpty());
     }
 
@@ -249,6 +260,54 @@ private slots:
         QCOMPARE(values(elements, QStringLiteral("temperature")), QStringList({"294.65", "292.15"}));
         QCOMPARE(values(elements, QStringLiteral("switchmix")), QStringList({"mix0", "mix1"}));
         QCOMPARE(values(elements, QStringLiteral("greatestdepth")), QStringList({"25.60"}));
+        QCOMPARE(values(elements, QStringLiteral("divemode")), QStringList({"opencircuit"}));
+        QCOMPARE(values(elements, QStringLiteral("lowesttemperature")), QStringList({"292.15"}));
+        //Open-circuit test header: no CCR or Bühlmann data must be emitted.
+        QVERIFY(values(elements, QStringLiteral("measuredpo2")).isEmpty());
+        QVERIFY(values(elements, QStringLiteral("surfacepressure")).isEmpty());
+        QVERIFY(values(elements, QStringLiteral("gradientfactorlow")).isEmpty());
+        QVERIFY(values(elements, QStringLiteral("averagedepth")).isEmpty());
+    }
+
+    void writesUddfCcrDive()
+    {
+        //Dive 267 (captured): CCR mode, GF 50/70, ambient pressure 1063 mBar.
+        QString error;
+        const auto dive = parseDive({QStringLiteral("DVSTART0026720260620101701+010310631105007002100000516640102"),
+                                     QStringLiteral("DVLOG0145302171616124"),
+                                     QStringLiteral("DVGSW00040050000"),
+                                     QStringLiteral("DVLOG0146002151616123"),
+                                     QStringLiteral("END0210000530026")},
+                                    &error);
+        QVERIFY2(dive, qPrintable(error));
+
+        QString xmlError;
+        const QList<Element> elements = readElements(writeUddf(*dive), &xmlError);
+        QVERIFY2(xmlError.isEmpty(), qPrintable(xmlError));
+        QCOMPARE(values(elements, QStringLiteral("divemode")), QStringList({"closedcircuit"}));
+        QCOMPARE(values(elements, QStringLiteral("surfacepressure")), QStringList({"106300"}));
+        QCOMPARE(values(elements, QStringLiteral("gradientfactorlow")), QStringList({"0.50"}));
+        QCOMPARE(values(elements, QStringLiteral("gradientfactorhigh")), QStringList({"0.70"}));
+        QCOMPARE(values(elements, QStringLiteral("measuredpo2")), QStringList({"12400", "12400", "12300"}));
+        QCOMPARE(values(elements, QStringLiteral("averagedepth")), QStringList({"26"}));
+        QCOMPARE(values(elements, QStringLiteral("lowesttemperature")), QStringList({"289.31"}));
+    }
+
+    void doesNotMislabelGaugeModeAsOpenCircuit()
+    {
+        QString gaugeHeader = header();
+        gaugeHeader[35] = u'2';
+        QString error;
+        const auto dive = parseDive({gaugeHeader, QStringLiteral("DVLOG0001001232150311"), QStringLiteral("END")},
+                                    &error);
+        QVERIFY2(dive, qPrintable(error));
+        QCOMPARE(dive->mode, DiveMode::Gauge);
+
+        QString xmlError;
+        const QList<Element> elements = readElements(writeUddf(*dive), &xmlError);
+        QVERIFY2(xmlError.isEmpty(), qPrintable(xmlError));
+        QVERIFY(values(elements, QStringLiteral("divemode")).isEmpty());
+        QVERIFY(values(elements, QStringLiteral("measuredpo2")).isEmpty());
     }
 
     void linksSingleMixToTank_data()

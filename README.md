@@ -91,6 +91,8 @@ List entry `DV0029320261010140617016800300210012` contains:
 - max depth `0021` in whole meters
 - average depth `0012`
 
+The `DVSTART` header (60 chars) contains the dive number, `yyyyMMddHHmmss` start time, timezone, sample interval, ambient pressure in mBar, a mode digit (0 = open circuit, 1 = CCR, 2 = gauge), a deco-model digit (1 = Bühlmann ZH-L16C with gradient factors), GF low %, GF high %, O2 % and He % of the starting mix, O2 setpoint in mBar, initial temperature, salinity offset and a system status byte.
+
 `DVLOG0105901749446320` contains:
 
 - time `01059` in seconds
@@ -104,6 +106,7 @@ List entry `DV0029320261010140617016800300210012` contains:
 - Several records received in one read are split and handled one at a time. If the computer doesn't answer `GTDL`, `GTNX` or `GTNR` within 3 s, the command is sent again, up to 3 times. A record repeated because of a retry is ignored.
 - Temperatures below 10 °C are read correctly. The original app read a fixed 3-digit slice, so 9.44 °C became 94 °C.
 - UDDF output is valid and contains no fabricated tank or air-temperature data.
+- The UDDF export uses every standard element the device data supports: `divemode` (open/closed circuit), `measuredpo2` per waypoint on CCR dives (average of the O2 sensors, with a declared `o2sensor`), `surfacepressure`, `gradientfactorlow`/`gradientfactorhigh` under `decomodel`/`buehlmann`, `averagedepth` from the `END` record, and `lowesttemperature` from the samples. The O2 setpoint is not exported: captured headers send `0005` and `DVSSW` records show `-024`, neither matching the documented format.
 
 ## Units
 

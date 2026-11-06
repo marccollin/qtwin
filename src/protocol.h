@@ -38,12 +38,24 @@ struct GasMix {
     int hePercent = 0;
 };
 
+enum class DiveMode {
+    Unknown,
+    OpenCircuit,
+    ClosedCircuit,
+    Gauge,
+};
+
 struct Dive {
     QString number;
     QDateTime start;
     QList<GasMix> mixes;            //mixes[0] is the starting mix
     QList<Sample> samples;
     QMap<int, int> gasSwitches;     //sample index -> mix index
+    DiveMode mode = DiveMode::Unknown; //DVSTART mode digit: 0=OC, 1=CCR, 2=gauge
+    std::optional<int> surfacePressureMillibar; //DVSTART ambient pressure
+    std::optional<int> gradientFactorLow;       //DVSTART, percent (Bühlmann ZH-L16C only)
+    std::optional<int> gradientFactorHigh;      //DVSTART, percent (Bühlmann ZH-L16C only)
+    std::optional<int> averageDepthMeters;      //END record, whole meters
     QStringList warnings;
 };
 

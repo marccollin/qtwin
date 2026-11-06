@@ -144,6 +144,37 @@ std::optional<Dive> parseDive(const QStringList &responses, QString *error)
     }
     dive.mixes << firstMix;
 
+    //Additional DVSTART fields (D-Twin Bluetooth protocol document):
+    //[31:35] ambient pressure (mBar), [35] mode (0=OC, 1=CCR, 2=gauge),
+    //[36] deco model (1=Bühlmann ZH-L16C with gradient factors),
+    //[37:40] GF low (%), [40:43] GF high (%).
+    //[48:52] O2 setpoint (mBar) is skipped: captured headers send "0005",
+    //which does not match the documented format.
+    if (const auto mode = intField(header, 35, 1)) {
+        switch (*mode) {
+        case 0:
+            dive.mode = DiveMode::OpenCircuit;
+            break;
+        case 1:
+            dive.mode = DiveMode::ClosedCircuit;
+            break;
+        case 2:
+            dive.mode = DiveMode::Gauge;
+            break;
+        default:
+            dive.warnings << QStringLiteral("Unknown dive mode \"%1\".").arg(*mode);
+            break;
+        }
+    } else {
+        dive.warnings << QStringLiteral("Could not read the dive mode.");
+    }
+    if (const auto pressure = intField(header, 31, 4); pressure && *pressure > 0)
+        dive.surfacePressureMillibar = *pressure;
+    if (intField(header, 36, 1).value_or(0) == 1) {
+        dive.gradientFactorLow = intField(header, 37, 3);
+        dive.gradientFactorHigh = intField(header, 40, 3);
+    }
+
     QMap<QString, int> unknownTypes;
     std::optional<int> previousTemperature;
     for (qsizetype i = 1; i < records.size(); ++i) {
@@ -190,6 +221,11 @@ std::optional<Dive> parseDive(const QStringList &responses, QString *error)
             //match the documented unsigned 4-digit setpoint.
             continue;
         } else if (record.startsWith(QLatin1String("END"))) {
+            //[3:8] runtime (s), [8:12] max depth, [12:16] average depth. The
+            //protocol document says tenths of a meter, but the device sends
+            //whole meters (dive 280: "0111" for a 110.8 m dive).
+            if (const auto averageDepth = intField(record, 12, 4))
+                dive.averageDepthMeters = *averageDepth;
             break;
         } else {
             ++unknownTypes[record.left(5)];
