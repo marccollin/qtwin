@@ -8,11 +8,11 @@ constexpr int MaxRetries = 3;
 
 bool isRetryable(const QByteArray &command)
 {
-    // Commands that only ask for the next item; repeating them is harmless.
+    //Commands that only ask for the next item; repeating them is harmless.
     return command == "GTDL" || command == "GTNX" || command == "GTNR";
 }
 
-} // namespace
+} //namespace
 
 DTwinClient::DTwinClient(QObject *parent)
     : QObject(parent)
@@ -183,7 +183,7 @@ void DTwinClient::onConnected()
     case Operation::Stop:
         emit traffic(QStringLiteral("→"), "STOP");
         m_socket->write("STOP");
-        // Give the command time to leave before closing, as no answer is expected.
+        //Give the command time to leave before closing, as no answer is expected.
         later(500, &DTwinClient::finishStop);
         break;
     case Operation::None:
@@ -194,7 +194,7 @@ void DTwinClient::onConnected()
 
 void DTwinClient::sendCommand(const QByteArray &command)
 {
-    // Sent once all records of the current response have been handled.
+    //Sent once all records of the current response have been handled.
     m_pendingCommand = command;
     m_commandQueued = true;
 }
@@ -223,7 +223,7 @@ void DTwinClient::onReadyRead()
     m_buffer += data;
     m_responseTimer.start(m_timing.responseTimeoutMs);
 
-    // Records have no terminator and may arrive split or several at once.
+    //Records have no terminator and may arrive split or several at once.
     QStringList records;
     for (;;) {
         while (!m_buffer.isEmpty() && (m_buffer.front() == '\r' || m_buffer.front() == '\n' || m_buffer.front() == '\0'))
@@ -260,7 +260,7 @@ void DTwinClient::onSocketDisconnected()
 
 void DTwinClient::finishResponse()
 {
-    // Fallback for data of unknown length: treat everything received as one response.
+    //Fallback for data of unknown length: treat everything received as one response.
     QString response = QString::fromLatin1(m_buffer);
     m_buffer.clear();
     response.remove(QChar(u'\0'));
@@ -283,14 +283,14 @@ void DTwinClient::deliverRecords(const QStringList &records)
     const quint64 generation = m_generation;
     for (const QString &record : records) {
         if (record == m_lastRecord) {
-            // A request repeated after a timeout can return the same record twice.
+            //A request repeated after a timeout can return the same record twice.
             emit traffic(QStringLiteral("!"), "ignoring repeated record " + record.toLatin1());
             continue;
         }
         m_lastRecord = record;
         handleResponse(record);
         if (generation != m_generation || !m_socket)
-            return; // finished, failed or reconnecting
+            return; //finished, failed or reconnecting
     }
 
     if (m_commandQueued)
@@ -387,7 +387,7 @@ void DTwinClient::handleResponse(const QString &response)
 void DTwinClient::startNextDive(int delayMs)
 {
     if (m_operation == Operation::None && m_diveIndex > 0)
-        return; // cancelled while the previous dive was being saved
+        return; //cancelled while the previous dive was being saved
     if (m_diveIndex >= m_diveIds.size()) {
         finish();
         emit downloadsFinished();

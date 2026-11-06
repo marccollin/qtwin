@@ -113,7 +113,7 @@ int main(int argc, char *argv[])
     QTextStream(stdout) << "Connecting to " << address.toString()
                         << " using UUID 00001101-0000-1000-8000-00805f9b34fb...\n";
     timeout.start(20000);
-    // Defer connecting so synchronous backend errors are handled inside the event loop.
+    //Defer connecting so synchronous backend errors are handled inside the event loop.
     QTimer::singleShot(0, &app, [&] {
         socket.connectToService(address, QBluetoothUuid(QBluetoothUuid::ServiceClassUuid::SerialPort));
     });

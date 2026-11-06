@@ -4,6 +4,7 @@
 
 #include <cctype>
 #include <cstdlib>
+#include <string>
 #include <utility>
 
 namespace qtwin {
@@ -19,7 +20,7 @@ std::optional<int> intField(const QString &record, qsizetype pos, qsizetype len)
     return ok ? std::optional<int>(value) : std::nullopt;
 }
 
-} // namespace
+} //namespace
 
 double hundredthsCelsiusToKelvin(int hundredths)
 {
@@ -38,7 +39,7 @@ qsizetype expectedResponseLength(const QByteArray &response)
             return k.length;
     }
     if (response.size() >= 3 && response.startsWith("DV") && std::isdigit(static_cast<unsigned char>(response.at(2))))
-        return 36; // dive list entry
+        return 36; //dive list entry
     return 0;
 }
 
@@ -48,7 +49,7 @@ std::optional<int> parseSampleTemperature(const QString &record, std::optional<i
     if (record.size() <= start || record.at(start) < u'1' || record.at(start) > u'9')
         return std::nullopt;
 
-    // 4 digits: 10.00-49.99 °C, 3 digits: 1.00-9.99 °C, 2 digits: 0.10-0.99 °C.
+    //4 digits: 10.00-49.99 °C, 3 digits: 1.00-9.99 °C, 2 digits: 0.10-0.99 °C.
     QList<int> candidates;
     for (qsizetype width = 4; width >= 2; --width) {
         if (const auto value = intField(record, start, width))
@@ -70,8 +71,8 @@ std::optional<int> parseSampleTemperature(const QString &record, std::optional<i
 
 std::optional<DiveListEntry> parseDiveListEntry(const QString &response)
 {
-    // [2:7] dive id, [7:21] yyyyMMddHHmmss, [21:25] duration (units of 10 s),
-    // [25:28] sample interval (s), [28:32] max depth, [32:36] average depth.
+    //[2:7] dive id, [7:21] yyyyMMddHHmmss, [21:25] duration (units of 10 s),
+    //[25:28] sample interval (s), [28:32] max depth, [32:36] average depth.
     const QString record = response.trimmed();
     if (record.size() < 7 || !record.startsWith(QLatin1String("DV")))
         return std::nullopt;
@@ -118,7 +119,7 @@ std::optional<Dive> parseDive(const QStringList &responses, QString *error)
         return std::nullopt;
     }
 
-    // Header: [7:12] dive number, [12:26] yyyyMMddHHmmss, [43:46] O2 %, [46:48] He %.
+    //Header: [7:12] dive number, [12:26] yyyyMMddHHmmss, [43:46] O2 %, [46:48] He %.
     const QString &header = records.first();
     if (header.size() < 26) {
         if (error)
@@ -149,8 +150,9 @@ std::optional<Dive> parseDive(const QStringList &responses, QString *error)
         const QString &record = records.at(i);
 
         if (record.startsWith(QLatin1String("DVLOG"))) {
-            // [5:10] time (s), [10:14] depth (tenths of a meter), [14:] temperature
-            // (hundredths of °C, unpadded) followed by an unidentified field.
+            //[5:10] time (s), [10:14] depth (tenths of a meter), [14:] temperature
+            //(hundredths of °C, unpadded) followed by the ppO2 in mBar (average
+            //of the O2 sensors; only meaningful in CCR mode, undefined otherwise).
             const auto time = intField(record, 5, 5);
             const auto depth = intField(record, 10, 4);
             if (!time || !depth) {
@@ -163,11 +165,16 @@ std::optional<Dive> parseDive(const QStringList &responses, QString *error)
             if (const auto temperature = parseSampleTemperature(record, previousTemperature)) {
                 previousTemperature = temperature;
                 sample.temperatureKelvin = hundredthsCelsiusToKelvin(*temperature);
+                //The unpadded temperature shifts the ppO2 field left; it starts
+                //right after the temperature digits.
+                const qsizetype ppo2Start = 14 + qsizetype(std::to_string(*temperature).size());
+                if (ppo2Start < record.size())
+                    sample.ppo2Millibar = intField(record, ppo2Start, record.size() - ppo2Start);
             }
             dive.samples << sample;
         } else if (record.startsWith(QLatin1String("DVGSW"))) {
-            // e.g. "DVGSW00040050000": [11:13] O2 %, [13:15] He %. The switch applies at
-            // the previous sample (confirmed against the original app's UDDF of dive 267).
+            //e.g. "DVGSW00040050000": [11:13] O2 %, [13:15] He %. The switch applies at
+            //the previous sample (confirmed against the original app's UDDF of dive 267).
             const auto switchO2 = intField(record, 11, 2);
             const auto switchHe = intField(record, 13, 2);
             if (!switchO2 || !switchHe) {
@@ -178,7 +185,9 @@ std::optional<Dive> parseDive(const QStringList &responses, QString *error)
             const int sampleIndex = dive.samples.isEmpty() ? 0 : int(dive.samples.size() - 1);
             dive.gasSwitches.insert(sampleIndex, int(dive.mixes.size() - 1));
         } else if (record.startsWith(QLatin1String("DVSSW"))) {
-            // Event record of unknown meaning, e.g. "DVSSW00006-024".
+            //Setpoint switch record (CCR only): [5:10] runtime (s), then the O2
+            //setpoint in mBar. Ignored; the observed "DVSSW00006-024" does not
+            //match the documented unsigned 4-digit setpoint.
             continue;
         } else if (record.startsWith(QLatin1String("END"))) {
             break;
@@ -195,4 +204,4 @@ std::optional<Dive> parseDive(const QStringList &responses, QString *error)
     return dive;
 }
 
-} // namespace qtwin
+} //namespace qtwin

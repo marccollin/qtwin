@@ -11,7 +11,7 @@ namespace {
 
 QString header(const QString &number = QStringLiteral("00012"), const QString &gas = QStringLiteral("03200"))
 {
-    // [7:12] number, [12:26] yyyyMMddHHmmss, [43:46] O2, [46:48] He
+    //[7:12] number, [12:26] yyyyMMddHHmmss, [43:46] O2, [46:48] He
     QString record = QStringLiteral("DVSTART") + number + QStringLiteral("20261014153000");
     record += QString(43 - record.size(), u'0');
     return record + gas;
@@ -55,7 +55,7 @@ QStringList values(const QList<Element> &elements, const QString &name)
     return result;
 }
 
-} // namespace
+} //namespace
 
 class TestProtocol : public QObject
 {
@@ -64,7 +64,7 @@ class TestProtocol : public QObject
 private slots:
     void parsesDiveListEntry()
     {
-        // Captured from a D-Twin.
+        //Captured from a D-Twin.
         const auto entry = parseDiveListEntry(QStringLiteral("DV0029320261010140617016800300210012"));
         QVERIFY(entry);
         QCOMPARE(entry->id, QStringLiteral("00293"));
@@ -86,14 +86,29 @@ private slots:
 
     void readsUnpaddedColdTemperatures()
     {
-        // Captured sequence crossing 10 °C: the temperature loses a digit and
-        // the following field shifts left.
+        //Captured sequence crossing 10 °C: the temperature loses a digit and
+        //the following field shifts left.
         QCOMPARE(parseSampleTemperature(QStringLiteral("DVLOG0098901671024588"), std::nullopt), 1024);
         QCOMPARE(parseSampleTemperature(QStringLiteral("DVLOG0105901749446320"), 1024), 944);
         QCOMPARE(parseSampleTemperature(QStringLiteral("DVLOG0151001603043560"), 320), 304);
         QCOMPARE(parseSampleTemperature(QStringLiteral("DVLOG0205001071024685"), 912), 1024);
         QCOMPARE(parseSampleTemperature(QStringLiteral("DVLOG0105901749446320"), std::nullopt), 944);
         QCOMPARE(parseSampleTemperature(QStringLiteral("DVLOG01059017"), std::nullopt), std::optional<int>());
+    }
+
+    void readsPpo2AfterUnpaddedTemperature()
+    {
+        //The ppO2 (mBar, average of the O2 sensors) follows the temperature and
+        //shifts left when the temperature has fewer digits.
+        QString error;
+        const auto dive = parseDive({header(),
+                                     QStringLiteral("DVLOG0098901671024588"),
+                                     QStringLiteral("DVLOG0105901749446320"),
+                                     QStringLiteral("END")},
+                                    &error);
+        QVERIFY2(dive, qPrintable(error));
+        QCOMPARE(dive->samples.at(0).ppo2Millibar, std::optional<int>(588));
+        QCOMPARE(dive->samples.at(1).ppo2Millibar, std::optional<int>(6320));
     }
 
     void framesResponsesByLength()
@@ -129,13 +144,15 @@ private slots:
         QCOMPARE(dive->samples.at(1).timeSeconds, 20);
         QCOMPARE(dive->samples.at(1).depthMeters, 25.6);
         QVERIFY(qFuzzyCompare(*dive->samples.at(0).temperatureKelvin, 294.65));
+        QCOMPARE(dive->samples.at(0).ppo2Millibar, std::optional<int>(311));
+        QCOMPARE(dive->samples.at(2).ppo2Millibar, std::optional<int>(313));
         QCOMPARE(dive->gasSwitches.value(1, -1), 1);
         QVERIFY(dive->warnings.isEmpty());
     }
 
     void readsCapturedGasSwitch()
     {
-        // Dive 267: rebreather (diluent air) bailout to EAN50, captured with btmon.
+        //Dive 267: rebreather (diluent air) bailout to EAN50, captured with btmon.
         QString error;
         const auto dive = parseDive({QStringLiteral("DVSTART0026720260620101701+010310631105007002100000516640102"),
                                      QStringLiteral("DVLOG0145302171616124"),
@@ -161,8 +178,8 @@ private slots:
 
     void readsCapturedImperialModeDive()
     {
-        // Dive 280 was recorded with the computer set to imperial units, yet
-        // depth and temperature are transmitted in meters and °C.
+        //Dive 280 was recorded with the computer set to imperial units, yet
+        //depth and temperature are transmitted in meters and °C.
         QString error;
         const auto dive = parseDive({QStringLiteral("DVSTART0028020260904193013+010310891105007001070000514720102"),
                                      QStringLiteral("DVLOG0000200141472305"),
@@ -201,7 +218,7 @@ private slots:
         const auto dive = parseDive({header(), QStringLiteral("XXXXX123"), QStringLiteral("DVLOGabc")},
                                     &error);
         QVERIFY(dive);
-        QCOMPARE(dive->warnings.size(), 3); // malformed sample, unknown type, no samples
+        QCOMPARE(dive->warnings.size(), 3); //malformed sample, unknown type, no samples
     }
 
     void rejectsShortHeader()

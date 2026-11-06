@@ -52,7 +52,7 @@ bool isDTwin(const QBluetoothDeviceInfo &info)
     return info.name().contains(QLatin1String("D-Twin"), Qt::CaseInsensitive);
 }
 
-} // namespace
+} //namespace
 
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
@@ -300,7 +300,7 @@ void MainWindow::onDeviceDiscovered(const QBluetoothDeviceInfo &info)
         log(tr("Found %1 (%2)").arg(info.name(), info.address().toString()));
     refreshDeviceList();
 
-    // No need to wait for the full 30 s inquiry once the dive computer is visible.
+    //No need to wait for the full 30 s inquiry once the dive computer is visible.
     if (isDTwin(info) && !m_showAllDevices->isChecked() && m_discovery->isActive()) {
         m_discovery->stop();
         setBusy(false);

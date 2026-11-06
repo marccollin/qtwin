@@ -2,7 +2,7 @@
 
 #include <QBluetoothSocket>
 
-// Windows transport; the native Linux transport remains separate.
+//Windows transport; the native Linux transport remains separate.
 class QtRfcommSocket : public QBluetoothSocket
 {
     Q_OBJECT

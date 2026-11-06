@@ -6,9 +6,9 @@
 
 class QSocketNotifier;
 
-// Non-blocking Linux RFCOMM socket connected to a fixed channel.
-// QBluetoothSocket cannot do this with the BlueZ D-Bus backend that Qt uses
-// for BlueZ >= 5.46 ("Connecting to port is not supported via Bluez DBus").
+//Non-blocking Linux RFCOMM socket connected to a fixed channel.
+//QBluetoothSocket cannot do this with the BlueZ D-Bus backend that Qt uses
+//for BlueZ >= 5.46 ("Connecting to port is not supported via Bluez DBus").
 class RfcommSocket : public QObject
 {
     Q_OBJECT

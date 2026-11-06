@@ -11,8 +11,8 @@
 
 namespace {
 
-// From <bluetooth/bluetooth.h> and <bluetooth/rfcomm.h>, which are not
-// required to be installed.
+//From <bluetooth/bluetooth.h> and <bluetooth/rfcomm.h>, which are not
+//required to be installed.
 constexpr int BtProtoRfcomm = 3;
 
 struct BdAddr {
@@ -25,7 +25,7 @@ struct SockAddrRc {
     quint8 channel;
 };
 
-} // namespace
+} //namespace
 
 RfcommSocket::RfcommSocket(QObject *parent)
     : QObject(parent)
@@ -52,7 +52,7 @@ void RfcommSocket::connectToDevice(const QBluetoothAddress &address, quint8 chan
     addr.family = AF_BLUETOOTH;
     const quint64 value = address.toUInt64();
     for (int i = 0; i < 6; ++i)
-        addr.address.b[i] = quint8(value >> (8 * i)); // little-endian, as BlueZ expects
+        addr.address.b[i] = quint8(value >> (8 * i)); //little-endian, as BlueZ expects
     addr.channel = channel;
 
     m_readNotifier = new QSocketNotifier(m_fd, QSocketNotifier::Read, this);
@@ -65,7 +65,7 @@ void RfcommSocket::connectToDevice(const QBluetoothAddress &address, quint8 chan
         setError(errno);
         return;
     }
-    // Completion (or failure) is reported through the write notifier.
+    //Completion (or failure) is reported through the write notifier.
 }
 
 void RfcommSocket::onWritable()
@@ -110,7 +110,7 @@ void RfcommSocket::onReadable()
         }
     }
 
-    // Signal handlers may close this socket, so check the state after each one.
+    //Signal handlers may close this socket, so check the state after each one.
     if (gotData) {
         emit readyRead();
         if (m_fd < 0)
@@ -136,7 +136,7 @@ qint64 RfcommSocket::write(const QByteArray &data)
         } else if (n < 0 && errno == EINTR) {
             continue;
         } else if (n < 0 && (errno == EAGAIN || errno == EWOULDBLOCK)) {
-            ::usleep(1000); // commands are a few bytes; the send buffer is never full for long
+            ::usleep(1000); //commands are a few bytes; the send buffer is never full for long
         } else {
             setError(errno);
             return -1;
@@ -152,7 +152,7 @@ QByteArray RfcommSocket::readAll()
 
 void RfcommSocket::abort()
 {
-    // deleteLater: abort() may run inside a notifier's activated() signal.
+    //deleteLater: abort() may run inside a notifier's activated() signal.
     for (QSocketNotifier *notifier : {m_readNotifier, m_writeNotifier}) {
         if (notifier) {
             notifier->setEnabled(false);

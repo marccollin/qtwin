@@ -44,7 +44,7 @@ Bluetooth behaviour.
 
 QTwin saves `<output>/DiveN_yyyy_MM_dd.uddf` and the raw `.txt` response. If parsing fails, it keeps the raw data as `Dive<id>_unparsed.txt`.
 
-## Protocol (confirmed with a btmon capture of the original app)
+## Protocol (confirmed with a btmon capture of the original app and the D-Twin Bluetooth protocol document)
 
 ### Experimental Qt Bluetooth connection probe
 
@@ -96,7 +96,7 @@ List entry `DV0029320261010140617016800300210012` contains:
 - time `01059` in seconds
 - depth `0174` in tenths
 - temperature in hundredths of °C, **without zero padding** (`944` = 9.44 °C)
-- an unidentified field, which shifts left when the temperature has fewer digits
+- ppO2 in mBar, the average of the O2 sensors (`6320` here — the value is only meaningful in CCR mode and undefined otherwise). It shifts left when the temperature has fewer digits
 
 ## Fixes over the original
 
@@ -117,6 +117,6 @@ For a dive with exactly one mix, QTwin writes a `tankdata` section linking that 
 
 ## Unverified assumptions
 
-- `DVSSW` records (e.g. `DVSSW00022-024`, seen on rebreather dives) are ignored; their meaning is unknown (possibly a setpoint switch).
+- `DVSSW` records (e.g. `DVSSW00022-024`, seen on rebreather dives) are setpoint switches, confirmed by the D-Twin Bluetooth protocol document: 5-digit runtime in seconds, then the O2 setpoint in mBar. QTwin ignores them; the observed `-024` setpoint does not match the documented unsigned 4-digit format.
 
 To diagnose a problem, enable **Show Bluetooth traffic** and keep the raw `.txt` files.

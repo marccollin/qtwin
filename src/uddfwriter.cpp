@@ -30,7 +30,7 @@ bool writeFile(const QString &path, const QByteArray &content, QString *error)
     return true;
 }
 
-} // namespace
+} //namespace
 
 QByteArray writeUddf(const Dive &dive)
 {
@@ -104,8 +104,8 @@ QByteArray writeUddf(const Dive &dive)
         const std::optional<int> switchedMix =
             dive.gasSwitches.contains(i) ? std::optional<int>(dive.gasSwitches.value(i)) : std::nullopt;
         if (i == 0) {
-            // The first waypoint always declares the starting gas; a switch at the
-            // same moment gets its own waypoint, as in the original application.
+            //The first waypoint always declares the starting gas; a switch at the
+            //same moment gets its own waypoint, as in the original application.
             writeWaypoint(sample, 0);
             if (switchedMix)
                 writeWaypoint(sample, switchedMix);
@@ -124,10 +124,10 @@ QByteArray writeUddf(const Dive &dive)
         xml.writeEndElement();
     }
 
-    xml.writeEndElement(); // dive
-    xml.writeEndElement(); // repetitiongroup
-    xml.writeEndElement(); // profiledata
-    xml.writeEndElement(); // uddf
+    xml.writeEndElement(); //dive
+    xml.writeEndElement(); //repetitiongroup
+    xml.writeEndElement(); //profiledata
+    xml.writeEndElement(); //uddf
     xml.writeEndDocument();
     return output;
 }
@@ -177,4 +177,4 @@ ExportResult exportDive(const QString &diveId, const QStringList &responses,
     return result;
 }
 
-} // namespace qtwin
+} //namespace qtwin

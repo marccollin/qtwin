@@ -7,6 +7,6 @@ QtRfcommSocket::QtRfcommSocket(QObject *parent)
 
 void QtRfcommSocket::connectToDevice(const QBluetoothAddress &address, quint8 channel)
 {
-    // Preserve the original application's channel selection (1 or 5).
+    //Preserve the original application's channel selection (1 or 5).
     connectToService(address, channel);
 }

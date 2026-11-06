@@ -17,11 +17,11 @@ using DTwinSocket = QtRfcommSocket;
 using DTwinSocket = RfcommSocket;
 #endif
 
-// Asynchronous client for the D-Twin RFCOMM protocol. Like the original
-// application, every operation uses its own connection:
-//   dive list: GTDL, then GTNX repeatedly until ENOD
-//   one dive:  GTDV -> DVNUM, "DV<id>" -> header, GTNR repeatedly until END
-//   end:       STOP
+//Asynchronous client for the D-Twin RFCOMM protocol. Like the original
+//application, every operation uses its own connection:
+//dive list: GTDL, then GTNX repeatedly until ENOD
+//one dive:  GTDV -> DVNUM, "DV<id>" -> header, GTNR repeatedly until END
+//end:       STOP
 class DTwinClient : public QObject
 {
     Q_OBJECT
@@ -29,16 +29,16 @@ class DTwinClient : public QObject
 public:
     struct Timing {
         int connectTimeoutMs = 15000;
-        int responseTimeoutMs = 3000; // the computer normally answers within 200 ms
-        int quietGapMs = 300;        // fallback for responses of unknown length
-        int commandDelayMs = 0;      // pause before each follow-up command
-        int reconnectDelayMs = 1000; // pause between consecutive connections
+        int responseTimeoutMs = 3000; //the computer normally answers within 200 ms
+        int quietGapMs = 300;        //fallback for responses of unknown length
+        int commandDelayMs = 0;      //pause before each follow-up command
+        int reconnectDelayMs = 1000; //pause between consecutive connections
     };
 
     explicit DTwinClient(QObject *parent = nullptr);
     ~DTwinClient() override;
 
-    // The original application used channel 5 when the device name contains ':'.
+    //The original application used channel 5 when the device name contains ':'.
     static quint16 channelForDeviceName(const QString &name);
 
     void setTarget(const QBluetoothAddress &address, quint16 channel);
